@@ -119,15 +119,24 @@
                         entries.forEach(function (entry) {
                             if (entry.isIntersecting) {
                                 let img = entry.target;
-                                img.src = img.dataset.src;
-                                img.onload = function() {
-                                    img.classList.remove("lazy");
-                                };
+                                setTimeout(() => { // Add a delay
+                                    img.src = img.dataset.src;
+                                    img.onload = function() {
+                                        img.classList.remove("lazy");
+                                    };
+                                    console.log(`Image loaded: ${img.dataset.src}`);
+                                }, 500); // 1-second delay
                                 observer.unobserve(img);
                             }
                         });
                     });
+
+                    lazyImages.forEach(function (img) {
+                        observer.observe(img);
+                    });
+                } 
             }
+
 
             // Display users with proper image URLs
             function displayUsers(users) {
