@@ -1,0 +1,111 @@
+﻿@{
+    ViewData["Title"] = "Posts";
+}
+
+<div class="container">
+    <h1 class="mb-4">Posts List</h1>
+
+    <div class="mb-3">
+        <div class="btn-group" role="group">
+            <button id="loadFromRedis" class="btn btn-primary">Load from Redis</button>
+            <button id="loadFromMemory" class="btn btn-success">Load from Memory</button>
+            <button id="clearCache" class="btn btn-danger">Clear Cache</button>
+        </div>
+        <span id="loadingStatus" class="ms-3"></span>
+    </div>
+
+    <div class="row" id="postsList">
+        <!-- Posts will be dynamically loaded here -->
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const postsList = document.getElementById('postsList');
+            const loadingStatus = document.getElementById('loadingStatus');
+
+            function showLoading() {
+                loadingStatus.textContent = 'Loading...';
+            }
+
+            function hideLoading() {
+                loadingStatus.textContent = '';
+            }
+
+            function displayPosts(posts) {
+                postsList.innerHTML = '';
+
+                posts.forEach(post => {
+                    const card = document.createElement('div');
+                    card.className = 'col-md-6 mb-4';
+                    card.innerHTML = `
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">${post.title}</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">Post ID: ${post.id} | User ID: ${post.userId}</h6>
+                                <p class="card-text">${post.body}</p>
+                            </div>
+                        </div>
+                    `;
+                    postsList.appendChild(card);
+                });
+            }
+
+            function handleError(error) {
+                console.error('Error:', error);
+                postsList.innerHTML = `<div class="col-12 text-center text-danger">
+                    <p>Error loading data. Please try again.</p>
+                </div>`;
+                hideLoading();
+            }
+
+            document.getElementById('loadFromRedis').addEventListener('click', function() {
+                showLoading();
+                fetch('/api/ApiData/redis/posts')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.json();
+                    })
+                    .then(posts => {
+                        displayPosts(posts);
+                        hideLoading();
+                    })
+                    .catch(handleError);
+            });
+
+            document.getElementById('loadFromMemory').addEventListener('click', function() {
+                showLoading();
+                fetch('/api/ApiData/memory/posts')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.json();
+                    })
+                    .then(posts => {
+                        displayPosts(posts);
+                        hideLoading();
+                    })
+                    .catch(handleError);
+            });
+
+            document.getElementById('clearCache').addEventListener('click', function() {
+                if (confirm('This will clear both Redis and Memory cache for posts. Continue?')) {
+                    Promise.all([
+                        fetch('/api/ApiData/redis/clear?key=posts', { method: 'DELETE' }),
+                        fetch('/api/ApiData/memory/clear?key=posts', { method: 'DELETE' })
+                    ])
+                    .then(() => {
+                        alert('Cache cleared successfully!');
+                    })
+                    .catch(error => {
+                        console.error('Error clearing cache:', error);
+                        alert('Error clearing cache.');
+                    });
+                }
+            });
+
+            // Initial load from memory
+            document.getElementById('loadFromMemory').click();
+        });
+    </script>
+}

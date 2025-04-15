@@ -1,0 +1,32 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Caching and Dynamic UI Demo</h1>
+    <p>This application demonstrates API integration with Redis and Memory caching, plus dynamic UI updates.</p>
+
+    <div class="row mt-4">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Users Demo</h5>
+                    <p class="card-text">View users data fetched from JSONPlaceholder API with Redis and Memory caching.</p>
+                    <a asp-controller="Home" asp-action="Users" class="btn btn-primary">Go to Users</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Posts Demo</h5>
+                    <p class="card-text">View posts data fetched from JSONPlaceholder API with Redis and Memory caching.</p>
+                    <a asp-controller="Home" asp-action="Posts" class="btn btn-primary">Go to Posts</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>

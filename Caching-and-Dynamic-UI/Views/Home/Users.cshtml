@@ -1,0 +1,232 @@
+﻿@model List<Caching_and_Dynamic_UI.Models.ImageItem>
+@{
+    ViewData["Title"] = "Users Gallery";
+}
+
+<div class="container">
+    <h2 class="mb-4 text-center">Lazy Loaded Image Gallery</h2>
+
+    <div class="mb-4 text-center">
+        <div class="btn-group shadow" role="group">
+            <button id="loadFromRedis" class="btn btn-primary">Load from Redis</button>
+            <button id="loadFromMemory" class="btn btn-success">Load from Memory</button>
+            <button id="clearCache" class="btn btn-danger">Clear Cache</button>
+        </div>
+        <div class="mt-2">
+            <span id="loadingStatus" class="badge bg-info text-white"></span>
+        </div>
+    </div>
+
+    <div id="gallery" class="gallery-container">
+        <!-- Gallery will be populated dynamically -->
+    </div>
+</div>
+
+<style>
+    .gallery-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 40px;
+    }
+
+    .gallery-item {
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        background-color: #fff;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+
+    .image-wrapper {
+        position: relative;
+        padding-top: 100%; 
+        overflow: hidden;
+        background-color: #f8f9fa;
+    }
+
+    .gallery-img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease;
+    }
+
+
+    .caption {
+        padding: 15px;
+        text-align: center;
+        background-color: #fff;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+        .caption h5 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #444;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+    .loading-status {
+        min-height: 24px;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const gallery = document.getElementById('gallery');
+            const loadingStatus = document.getElementById('loadingStatus');
+
+            // Check for WebP support
+            const supportsWebP = (function() {
+                const canvas = document.createElement('canvas');
+                if (canvas.getContext && canvas.getContext('2d')) {
+                    return canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+                }
+                return false;
+            })();
+
+            function showLoading() {
+                loadingStatus.textContent = 'Loading...';
+                loadingStatus.classList.remove('d-none');
+            }
+
+            function hideLoading() {
+                loadingStatus.textContent = '';
+                loadingStatus.classList.add('d-none');
+            }
+
+            // Simple lazy loading
+            function initLazyLoading() {
+                let lazyImages = [].slice.call(document.querySelectorAll("img.lazy"));
+
+                if ("IntersectionObserver" in window) {
+                    let observer = new IntersectionObserver(function (entries, obs) {
+                        entries.forEach(function (entry) {
+                            if (entry.isIntersecting) {
+                                let img = entry.target;
+                                img.src = img.dataset.src;
+                                img.onload = function() {
+                                    img.classList.remove("lazy");
+                                };
+                                observer.unobserve(img);
+                            }
+                        });
+                    });
+            }
+
+            // Display users with proper image URLs
+            function displayUsers(users) {
+                gallery.innerHTML = '';
+
+                users.forEach(user => {
+                    // Format URL based on support
+                    const jpgUrl = `https://i.pravatar.cc/250?img=${user.id}`;
+                    const webpUrl = `https://i.pravatar.cc/250?img=${user.id}&format=webp`;
+                    const imageUrl = supportsWebP ? webpUrl : jpgUrl;
+
+                    // Create gallery item
+                    const item = document.createElement('div');
+                    item.className = 'gallery-item';
+
+                    // Create image wrapper and image
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'image-wrapper';
+
+                    const img = document.createElement('img');
+                    img.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+                    img.dataset.src = imageUrl;
+                    img.className = "gallery-img lazy";
+                    img.alt = user.name;
+
+                    wrapper.appendChild(img);
+
+                    // Create caption
+                    const caption = document.createElement('div');
+                    caption.className = 'caption';
+                    caption.innerHTML = `<h5>${user.name}</h5>`;
+
+                    // Assemble gallery item
+                    item.appendChild(wrapper);
+                    item.appendChild(caption);
+
+                    // Add to gallery
+                    gallery.appendChild(item);
+                });
+
+                // Initialize lazy loading after adding images
+                initLazyLoading();
+            }
+
+            function handleError(error) {
+                console.error('Error:', error);
+                gallery.innerHTML = `<div class="alert alert-danger col-12">
+                    <p class="mb-0">Error loading data. Please try again.</p>
+                </div>`;
+                hideLoading();
+            }
+
+            document.getElementById('loadFromRedis').addEventListener('click', function() {
+                showLoading();
+                fetch('/api/ApiData/redis/users')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.json();
+                    })
+                    .then(users => {
+                        displayUsers(users);
+                        hideLoading();
+                    })
+                    .catch(handleError);
+            });
+
+            document.getElementById('loadFromMemory').addEventListener('click', function() {
+                showLoading();
+                fetch('/api/ApiData/memory/users')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.json();
+                    })
+                    .then(users => {
+                        displayUsers(users);
+                        hideLoading();
+                    })
+                    .catch(handleError);
+            });
+
+            document.getElementById('clearCache').addEventListener('click', function() {
+                if (confirm('This will clear both Redis and Memory cache for users. Continue?')) {
+                    Promise.all([
+                        fetch('/api/ApiData/redis/clear?key=users', { method: 'DELETE' }),
+                        fetch('/api/ApiData/memory/clear?key=users', { method: 'DELETE' })
+                    ])
+                    .then(() => {
+                        alert('Cache cleared successfully!');
+                    })
+                    .catch(error => {
+                        console.error('Error clearing cache:', error);
+                        alert('Error clearing cache.');
+                    });
+                }
+            });
+
+            // Initial load
+            document.getElementById('loadFromMemory').click();
+        });
+    </script>
+}
+
